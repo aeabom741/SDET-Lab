@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  # === PostgreSQL (模擬 Master DB) ===
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: sdet_lab
+      POSTGRES_USER: sdet
+      POSTGRES_PASSWORD: sdet_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # === Redis (模擬 Cache 層) ===
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # === Flask API Server ===
+  api:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_URL: postgresql://sdet:sdet_pass@db:5432/sdet_lab
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+
+volumes:
+  pgdata:
