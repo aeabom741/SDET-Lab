@@ -23,7 +23,7 @@ services:
   api:
     build: .
     ports:
-      - "5000:5000"
+      - "5050:5000"
     environment:
       DATABASE_URL: postgresql://sdet:sdet_pass@db:5432/sdet_lab
       REDIS_URL: redis://redis:6379/0

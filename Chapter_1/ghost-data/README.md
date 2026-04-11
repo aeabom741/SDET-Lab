@@ -32,7 +32,7 @@ docker-compose up -d --build
 sleep 5
 
 # 驗證服務正常
-curl http://localhost:5000/profile/user_001
+curl http://localhost:5050/profile/user_001
 
 # 執行自動化測試
 pip install pytest requests
