@@ -98,15 +98,5 @@ SDET-LAB/
 2. **做對應的 Chapter Lab** → 親手把系統弄壞，建立肌肉記憶
 3. **寫測試** → 用 pytest 自動化驗證故障場景
 4. **填寫 Chapter README 的心得** → 練習面試口述
-
-面試時你能說：
-
-> 「我不只讀過這個架構，我實際搭了環境，注入了 Cache 更新失敗的故障，
-> 觀察到 DB 和 Cache 的資料不一致，然後寫了自動化測試驗證
-> TTL 安全網能在過期後自動修復一致性。」
-
-這比「我讀過 Alex Xu」有說服力十倍。
-
 ---
-
 Built by a SDET who believes **breaking systems is the best way to understand them**.
