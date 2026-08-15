@@ -24,15 +24,15 @@ docker-compose up -d --build
 sleep 5
 
 # 1. 讀取用戶資料（你平常做的 API 測試）
-curl http://localhost:5000/profile/user_001 | python -m json.tool
+curl http://localhost:5050/profile/user_001 | python -m json.tool
 
 # 2. 更新用戶資料
-curl -X PUT http://localhost:5000/profile/user_001 \
+curl -X PUT http://localhost:5050/profile/user_001 \
   -H "Content-Type: application/json" \
   -d '{"bio": "我的第一次更新"}' | python -m json.tool
 
 # 3. 再讀一次，確認更新成功
-curl http://localhost:5000/profile/user_001 | python -m json.tool
+curl http://localhost:5050/profile/user_001 | python -m json.tool
 ```
 
 做完之後問自己：
@@ -43,7 +43,7 @@ curl http://localhost:5000/profile/user_001 | python -m json.tool
 
 ```bash
 # 這個 API 會同時顯示 DB 和 Redis 裡的資料
-curl http://localhost:5000/debug/state/user_001 | python -m json.tool
+curl http://localhost:5050/debug/state/user_001 | python -m json.tool
 ```
 
 你會看到類似這樣的東西：
@@ -62,21 +62,21 @@ curl http://localhost:5000/debug/state/user_001 | python -m json.tool
 
 ```bash
 # 重置到初始狀態
-curl -X POST http://localhost:5000/debug/reset/user_001
+curl -X POST http://localhost:5050/debug/reset/user_001
 
 # 先正常更新一次，讓 Cache 有「舊資料」
-curl -X PUT http://localhost:5000/profile/user_001 \
+curl -X PUT http://localhost:5050/profile/user_001 \
   -H "Content-Type: application/json" \
   -d '{"bio": "舊的 Bio"}'
 
 # 注入故障：Server 在寫完 DB 後崩潰！
-curl -X PUT http://localhost:5000/profile/user_001 \
+curl -X PUT http://localhost:5050/profile/user_001 \
   -H "Content-Type: application/json" \
   -H "X-Fail-At: after_db" \
   -d '{"bio": "新的 Bio（但 Cache 不知道）"}'
 
 # 看看系統現在的狀態
-curl http://localhost:5000/debug/state/user_001 | python -m json.tool
+curl http://localhost:5050/debug/state/user_001 | python -m json.tool
 ```
 
 你會看到：
@@ -96,7 +96,7 @@ curl http://localhost:5000/debug/state/user_001 | python -m json.tool
 現在試試：
 ```bash
 # 模擬用戶重新整理頁面
-curl http://localhost:5000/profile/user_001 | python -m json.tool
+curl http://localhost:5050/profile/user_001 | python -m json.tool
 ```
 
 用戶拿到的是 Cache 裡的「舊的 Bio」，看不到已經更新的內容。
@@ -179,7 +179,7 @@ Test Case 3: 幽靈數據下用戶讀到舊資料
 ```python
 import requests
 
-BASE_URL = "http://localhost:5000"
+BASE_URL = "http://localhost:5050"
 
 def test_ghost_data():
     # Given: 重置用戶
@@ -235,7 +235,7 @@ Test Case: 重置後 Cache 應該被清空
 
 ```bash
 # 進入 Redis 容器
-docker exec -it ghost-data-redis-1 redis-cli
+docker exec -it ghost-data_redis_1 redis-cli
 
 # 查看所有 key
 KEYS *
@@ -258,7 +258,7 @@ TTL profile:user_001
 
 ```bash
 # 進入 DB 容器
-docker exec -it ghost-data-db-1 psql -U sdet -d sdet_lab
+docker exec -it ghost-data_db_1 psql -U sdet -d sdet_lab
 
 # 查看所有用戶資料
 SELECT * FROM users;
@@ -293,18 +293,18 @@ UPDATE users SET bio = '被直接改的 Bio' WHERE user_id = 'user_001';
 
 ```bash
 # 殺掉 Redis（模擬 Cache 層整個掛掉）
-docker stop ghost-data-redis-1
+docker stop ghost-data_redis_1
 
 # 試試看 GET /profile/user_001 會怎樣
-curl http://localhost:5000/profile/user_001
+curl http://localhost:5050/profile/user_001
 
 # 試試看 PUT 會怎樣
-curl -X PUT http://localhost:5000/profile/user_001 \
+curl -X PUT http://localhost:5050/profile/user_001 \
   -H "Content-Type: application/json" \
   -d '{"bio": "Redis 掛了的時候更新"}'
 
 # 把 Redis 救回來
-docker start ghost-data-redis-1
+docker start ghost-data_redis_1
 ```
 
 觀察到什麼行為？API 是直接 500 還是 graceful degradation？
