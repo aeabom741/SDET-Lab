@@ -19,7 +19,7 @@
 
 ```bash
 # 啟動系統
-cd Chapter_1/ghost-data
+cd chapter_1/ghost-data
 docker-compose up -d --build
 sleep 5
 
@@ -333,5 +333,5 @@ docker start ghost-data-redis-1
 
 ## 做完這章之後
 
-回到 Chapter_1/README.md，填寫「我從這章學到什麼」和「延伸思考」。
-然後帶著你的問題去找 Claude，開始 Chapter_2。
+回到 chapter_1/README.md，填寫「我從這章學到什麼」和「延伸思考」。
+然後帶著你的問題去找 Claude，開始 chapter_2。

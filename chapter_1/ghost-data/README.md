@@ -22,25 +22,26 @@ Actor → Flask API → PostgreSQL (DB) → Redis (Cache)
 ## 快速啟動
 
 ```bash
-# 進入任一情境資料夾，例如 ghost-data
-cd ghost-data
-
-# 啟動服務
+# 1. 啟動服務（在本情境資料夾 chapter_1/ghost-data 內）
 docker-compose up -d --build
 
-# 等待 DB 初始化
+# 2. 等待 DB 初始化
 sleep 5
 
-# 驗證服務正常
+# 3. 驗證服務正常（docker 把 5000 對外映射到 5050）
 curl http://localhost:5050/profile/user_001
 
-# 執行自動化測試
-pip install pytest requests
-pytest tests/ -v
+# 4. 執行自動化測試（★ 從 repo 根目錄跑，測試要 import 根目錄的 api/ 框架）
+cd ../..
+uv sync            # 首次或環境變動時
+uv run pytest chapter_1/ghost-data/testcase -v
 
-# 結束後關閉
-docker-compose down
+# 5. 結束後關閉服務
+cd chapter_1/ghost-data && docker-compose down
 ```
+
+> 測試打的是 `http://localhost:5050`（見 `api/base_api.py`）,不是 `5000`。
+> `5000` 是容器內 Flask 的埠,`docker-compose.yml` 把它映射到主機的 `5050`。
 
 ## API 清單
 
@@ -64,16 +65,16 @@ docker-compose down
 
 | 情境 | 資料夾 | 核心觀念 | SDET 測試重點 | 狀態 |
 |------|--------|----------|---------------|------|
-| 幽靈數據 | `ghost-data/` | Cache Inconsistency | DB 寫了但 Cache 沒更新，用戶讀到舊資料 | ⬜ |
+| 幽靈數據 | `ghost-data/` | Cache Inconsistency | DB 寫了但 Cache 沒更新，用戶讀到舊資料 | 🚧 |
 | Cache-Aside | `cache-aside/` | Lazy Loading | Cache Miss → 查 DB → 回填 Cache 的流程 | ⬜ |
 | 冪等性 | `idempotency/` | Idempotent Write | 同一請求發多次，結果跟一次一樣 | ⬜ |
 
 ## 各情境測試清單
 
 ### ghost-data（幽靈數據）
-- [ ] 正常更新後 DB 和 Cache 一致
-- [ ] 注入 `after_db` 故障後，DB 是新資料、Cache 是舊資料
-- [ ] 幽靈數據狀態下，用戶 GET 讀到的是 Cache 的舊資料
+- [x] 正常更新後 DB 和 Cache 一致（`TestPositiveCase`）
+- [x] 注入 `after_db` 故障後，DB 是新資料、Cache 是舊資料（`test_ghost_data_inconsistency`）
+- [x] 幽靈數據狀態下，用戶 GET 讀到的是 Cache 的舊資料（`test_user_reads_stale_cache`）
 - [ ] TTL 過期後，Cache 自動失效，下次讀取從 DB 拿到正確資料（自癒）
 
 ### cache-aside（Cache-Aside Pattern）
