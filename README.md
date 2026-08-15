@@ -16,68 +16,72 @@
 
 ## 環境需求
 
-- Docker & Docker Compose
-- Python 3.10+
-- pytest
+- Docker & Docker Compose（跑被測系統）
+- Python 3.11+
+- [uv](https://docs.astral.sh/uv/)（依賴與虛擬環境管理）
+
+安裝測試依賴：在 repo 根目錄執行 `uv sync`，會依 `uv.lock` 還原一模一樣的環境。
 
 ## 目錄結構
 
 ```
 SDET-LAB/
 ├── README.md                              ← 你正在看的這份
+├── pyproject.toml                         ← 測試框架的依賴宣告
+├── uv.lock                                ← 鎖定精確版本，uv sync 一鍵重現
+├── pytest.ini                             ← pytest 設定（allure 輸出）
 │
-├── Chapter_1/                             ← 你學的第一個主題
+├── api/                                   ← ★ 可重用的 API 測試框架（跨章節共用）
+│   ├── base_api.py                        ← HTTP 封裝（GET/POST/PUT + allure step）
+│   ├── api_validator.py                   ← 鏈式斷言（status/field should_be）
+│   └── collections/                       ← 各 endpoint 的封裝（類 Page Object）
+│       └── profile.py
+├── conf/                                  ← 共用設定
+│   └── log.py                             ← allure 整合的 logger
+│
+├── chapter_1/                             ← 你學的第一個主題
 │   ├── README.md                          ← 章節總覽 + 啟動方式 + 情境進度
-│   ├── ghost-data/                        ← 情境：幽靈數據
-│   │   ├── docker-compose.yml
-│   │   ├── Dockerfile
-│   │   ├── app.py
-│   │   ├── requirements.txt
-│   │   └── tests/
-│   │       └── test_ghost_data.py
-│   ├── cache-aside/                       ← 情境：Cache-Aside Pattern
-│   │   └── ...
-│   └── idempotency/                       ← 情境：冪等性驗證
-│       └── ...
+│   └── ghost-data/                        ← 情境：幽靈數據
+│       ├── docker-compose.yml             ← Flask + PostgreSQL + Redis
+│       ├── Dockerfile
+│       ├── app.py                         ← 被測系統（含 X-Fail-At 故障注入）
+│       ├── requirements.txt               ← 被測系統自己的依賴（Docker 內用）
+│       └── testcase/
+│           ├── conftest.py                ← fixtures（api、reset）
+│           └── test_profile_chaos.py      ← 自動化測試
 │
-├── Chapter_2/
-│   ├── README.md
-│   ├── token-bucket/
-│   ├── sliding-window/
-│   └── distributed-rate-limit/
-│
-├── Chapter_3/
-│   ├── README.md
-│   ├── hash-collision/
-│   ├── redirect-301-vs-302/
-│   └── expired-url-cleanup/
-│
+├── chapter_2/                             ← （尚未建立）
 └── ...
 ```
 
+> `api/` 和 `conf/` 是**跨章節共用**的測試框架,住在 repo 根目錄;每個 `chapter_N/<scenario>/` 只放被測系統 + 該情境的測試。
+
 ## 命名規則
 
-- **Chapter 資料夾**：`Chapter_N`，按你的學習順序編號，不綁定書的章節號
+- **Chapter 資料夾**：`chapter_N`（小寫），按你的學習順序編號，不綁定書的章節號
 - **情境資料夾**：用簡短的英文描述命名，例如 `ghost-data`、`token-bucket`、`sync-conflict`
 - 一看資料夾名稱就知道在練什麼，不用打開檔案才知道
 
 ## 每個情境的標準結構
 
 ```
-<scenario-name>/
+chapter_N/<scenario-name>/
 ├── docker-compose.yml         ← 一鍵啟動所有元件
-├── Dockerfile                 ← API Server image（如需要）
-├── app.py                     ← 主程式（含故障注入點）
-├── requirements.txt           ← Python 依賴
-└── tests/
-    └── test_<scenario>.py     ← 自動化測試
+├── Dockerfile                 ← 被測系統 image（如需要）
+├── app.py                     ← 被測系統主程式（含故障注入點）
+├── requirements.txt           ← 被測系統的 Python 依賴（Docker 內用）
+└── testcase/
+    ├── conftest.py            ← 該情境的 fixtures
+    └── test_<scenario>.py     ← 自動化測試（用根目錄的 api/ 框架）
 ```
+
+測試依賴統一由根目錄的 `pyproject.toml` 管理,不寫在各情境裡。
 
 ## 學習進度
 
 | Chapter | 主題 | 情境 | 完成 |
 |---------|------|------|------|
-| 1 | Cache & DB 一致性 | `ghost-data` `cache-aside` `idempotency` | ✅ |
+| 1 | Cache & DB 一致性 | `ghost-data` `cache-aside` `idempotency` | 🚧 |
 | 2 | Rate Limiter | `token-bucket` `sliding-window` `distributed-rate-limit` | ⬜ |
 | 3 | URL Shortener | `hash-collision` `redirect-301-vs-302` `expired-url-cleanup` | ⬜ |
 | 4 | Consistent Hashing | `virtual-nodes` `rebalancing` `hotspot` | ⬜ |
@@ -91,6 +95,26 @@ SDET-LAB/
 | 12 | Google Drive | `sync-conflict` `chunked-upload` `version-control` | ⬜ |
 
 > 情境數量是初估，每章讀完後自行調整
+
+## 快速開始
+
+```bash
+# 1. 還原測試環境（依 uv.lock，一模一樣）
+uv sync
+
+# 2. 啟動某個情境的被測系統
+cd chapter_1/ghost-data
+docker-compose up -d --build
+cd ../..
+
+# 3. 從 repo 根目錄跑測試（測試會 import 根目錄的 api/ 框架）
+uv run pytest -v
+
+# 4. 結束後關閉被測系統
+cd chapter_1/ghost-data && docker-compose down
+```
+
+> 測試一定要**從 repo 根目錄**跑,因為 `test_*.py` 會 `from api... import`,根目錄要在 import path 上。
 
 ## 怎麼用這個 Lab
 
