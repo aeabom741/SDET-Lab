@@ -27,6 +27,9 @@ services:
     environment:
       DATABASE_URL: postgresql://sdet:sdet_pass@db:5432/sdet_lab
       REDIS_URL: redis://redis:6379/0
+      # Cache TTL（秒）。預設 60；測試可用 shell 覆寫，例如：
+      #   CACHE_TTL_SECONDS=3 docker-compose up -d --build api
+      CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-60}
     depends_on:
       - db
       - redis

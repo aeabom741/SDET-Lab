@@ -28,6 +28,10 @@ DATABASE_URL = os.environ.get(
 )
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
+# Cache TTL（秒）作為安全網。用環境變數控制，讓測試能把過期時間縮短，
+# 以驗證「TTL 到期後自癒」的行為，而不需要在測試裡真的等 60 秒。
+CACHE_TTL_SECONDS = int(os.environ.get("CACHE_TTL_SECONDS", "60"))
+
 redis_client = redis.from_url(REDIS_URL, decode_responses=True)
 
 
@@ -107,8 +111,8 @@ def get_profile(user_id):
         "avatar_url": row[3],
     }
 
-    # 寫回 Cache（設 TTL 60 秒作為安全網）
-    redis_client.setex(f"profile:{user_id}", 60, json.dumps(data))
+    # 寫回 Cache（TTL 作為安全網，秒數由 CACHE_TTL_SECONDS 控制）
+    redis_client.setex(f"profile:{user_id}", CACHE_TTL_SECONDS, json.dumps(data))
     data["_source"] = "database"
     return jsonify(data)
 
@@ -178,7 +182,7 @@ def update_profile(user_id):
     # ===== Step 2: 更新 Redis Cache =====
     try:
         redis_client.setex(
-            f"profile:{user_id}", 60, json.dumps(updated_data)
+            f"profile:{user_id}", CACHE_TTL_SECONDS, json.dumps(updated_data)
         )
     except Exception as e:
         # Redis 掛了但 DB 已經寫了 — 資料不一致！
